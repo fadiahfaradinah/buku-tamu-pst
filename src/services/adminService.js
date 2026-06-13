@@ -1,11 +1,11 @@
 /**
  * adminService.js
  * Business logic for admin panel operations.
- * Handles fetching, filtering, and deleting guest records.
+ * Semua request REST menggunakan Supabase access_token dari AuthService
+ * sehingga Row-Level Security (RLS) pada Supabase tetap berlaku.
  */
 
 const AdminService = (() => {
-  const GUEST_TABLE = 'pst_guest';
 
   // Map id_purpose → label
   const PURPOSE_LABELS = {
@@ -16,59 +16,50 @@ const AdminService = (() => {
     5: 'Lainnya',
   };
 
+  /** Ambil access_token atau throw jika tidak ada session. */
+  function _token() {
+    const token = AuthService.getAccessToken();
+    if (!token) throw new Error('Tidak ada session aktif. Silakan login ulang.');
+    return token;
+  }
+
   /**
-   * Fetch all guests, ordered by visit_date descending.
+   * Fetch semua tamu, diurutkan visit_date descending.
    * @returns {Promise<{ data: Array, error: string|null }>}
    */
   async function getAllGuests() {
     try {
-      const qs = new URLSearchParams({
-        select: '*',
-        order:  'visit_date.desc,id_guest.desc',
-      }).toString();
-
-      const URL    = 'https://fufjaptmggulmzjrefvg.supabase.co/rest/v1';
-      const APIKEY = 'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l';
-
-      const res = await fetch(`${URL}/${GUEST_TABLE}?${qs}`, {
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        APIKEY,
-          'Authorization': `Bearer ${APIKEY}`,
-        },
-      });
-
-      const json = await res.json();
-      if (!res.ok) return { data: [], error: json?.message || `HTTP ${res.status}` };
-      return { data: json, error: null };
-
+      return await SupabaseService.selectAuth(
+        _token(),
+        'pst_guest',
+        { order: 'visit_date.desc,id_guest.desc' }
+      );
     } catch (err) {
-      return { data: [], error: err.message || 'Network error.' };
+      return { data: [], error: err.message };
     }
   }
 
   /**
-   * Fetch guests filtered by date range.
+   * Fetch tamu berdasarkan range tanggal kunjungan.
    * @param {string} dateFrom  – YYYY-MM-DD
    * @param {string} dateTo    – YYYY-MM-DD
    * @returns {Promise<{ data: Array, error: string|null }>}
    */
   async function getGuestsByRange(dateFrom, dateTo) {
     try {
-      const qs = new URLSearchParams({
-        select:     '*',
-        visit_date: `gte.${dateFrom}`,
-        order:      'visit_date.desc,id_guest.desc',
-      }).toString() + `&visit_date=lte.${dateTo}`;
+      // URLSearchParams tidak support multiple key yang sama,
+      // jadi kita bangun query string manual untuk dua filter visit_date.
+      const SUPABASE_URL = 'https://fufjaptmggulmzjrefvg.supabase.co/rest/v1';
+      const ANON_KEY     = 'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l';
+      const token        = _token();
 
-      const URL    = 'https://fufjaptmggulmzjrefvg.supabase.co/rest/v1';
-      const APIKEY = 'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l';
+      const qs = `select=*&visit_date=gte.${dateFrom}&visit_date=lte.${dateTo}&order=visit_date.desc,id_guest.desc`;
 
-      const res = await fetch(`${URL}/${GUEST_TABLE}?${qs}`, {
+      const res = await fetch(`${SUPABASE_URL}/pst_guest?${qs}`, {
         headers: {
           'Content-Type':  'application/json',
-          'apikey':        APIKEY,
-          'Authorization': `Bearer ${APIKEY}`,
+          'apikey':        ANON_KEY,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -77,43 +68,29 @@ const AdminService = (() => {
       return { data: json, error: null };
 
     } catch (err) {
-      return { data: [], error: err.message || 'Network error.' };
+      return { data: [], error: err.message };
     }
   }
 
   /**
-   * Delete a guest record by id_guest.
+   * Hapus satu record tamu berdasarkan id_guest.
    * @param {number|string} id
    * @returns {Promise<{ success: boolean, error: string|null }>}
    */
   async function deleteGuest(id) {
     try {
-      const URL    = 'https://fufjaptmggulmzjrefvg.supabase.co/rest/v1';
-      const APIKEY = 'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l';
-
-      const res = await fetch(`${URL}/${GUEST_TABLE}?id_guest=eq.${id}`, {
-        method:  'DELETE',
-        headers: {
-          'Content-Type':  'application/json',
-          'apikey':        APIKEY,
-          'Authorization': `Bearer ${APIKEY}`,
-        },
-      });
-
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        return { success: false, error: json?.message || `HTTP ${res.status}` };
-      }
-
-      return { success: true, error: null };
-
+      return await SupabaseService.deleteAuth(
+        _token(),
+        'pst_guest',
+        `id_guest=eq.${id}`
+      );
     } catch (err) {
-      return { success: false, error: err.message || 'Network error.' };
+      return { success: false, error: err.message };
     }
   }
 
   /**
-   * Get human-readable label for id_purpose.
+   * Label untuk id_purpose.
    * @param {number} id
    * @returns {string}
    */
@@ -122,7 +99,7 @@ const AdminService = (() => {
   }
 
   /**
-   * Format a date string (YYYY-MM-DD) to DD/MM/YYYY.
+   * Format YYYY-MM-DD → DD/MM/YYYY.
    * @param {string} dateStr
    * @returns {string}
    */

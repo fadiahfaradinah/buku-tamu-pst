@@ -173,6 +173,7 @@ const LoginPage = (() => {
         return;
       }
 
+      // Decode Google JWT untuk ambil profile (email, name, picture)
       const profile = AuthService.decodeJWT(response.credential);
 
       if (!profile.email) {
@@ -180,21 +181,43 @@ const LoginPage = (() => {
         return;
       }
 
-      // Show loading state while checking whitelist
-      const label = document.getElementById('login-btn-label');
-      if (label) label.textContent = 'Memverifikasi…';
+      // Tampilkan loading
+      _setLoading(true);
 
-      const allowed = await AuthService.isAllowed(profile.email);
+      // Jalankan full flow: Supabase Auth → cek pst_admin
+      const { success, error } = await AuthService.login(response.credential, profile);
 
-      if (!allowed) {
-        _showError(`Akun ${profile.email} tidak memiliki akses admin.`);
-        if (label) label.textContent = 'Masuk dengan Google';
+      if (!success) {
+        _showError(error || 'Login gagal.');
+        _setLoading(false);
         return;
       }
 
-      AuthService.saveSession(profile);
       Router.navigate('/admin/dashboard');
     };
+  }
+
+  // ── Loading state ──────────────────────────────────────────
+  function _setLoading(isLoading) {
+    const container = document.getElementById('google-btn-container');
+    const label     = document.getElementById('login-btn-label');
+    const loadingEl = document.getElementById('login-loading');
+
+    if (isLoading) {
+      if (container) container.style.opacity = '0.4';
+      if (!document.getElementById('login-loading')) {
+        const div = document.createElement('div');
+        div.id        = 'login-loading';
+        div.className = 'login-loading';
+        div.innerHTML = `
+          <div class="login-spinner"></div>
+          <span>Memverifikasi akun…</span>`;
+        container?.parentNode?.insertBefore(div, container.nextSibling);
+      }
+    } else {
+      if (container) container.style.opacity = '1';
+      document.getElementById('login-loading')?.remove();
+    }
   }
 
   // ── Event bindings ─────────────────────────────────────────

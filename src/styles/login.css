@@ -238,3 +238,28 @@
   }
   .login-title { font-size: 1.3rem; }
 }
+
+/* ── Loading state (Supabase Auth verification) ──────────── */
+.login-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 6px 0;
+}
+
+.login-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid #d1d9e6;
+  border-top-color: #1a3a6b;
+  border-radius: 50%;
+  animation: login-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes login-spin {
+  to { transform: rotate(360deg); }
+}
