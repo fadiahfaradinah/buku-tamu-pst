@@ -18,7 +18,13 @@
 
 const GuestService = (() => {
   const TABLE = 'pst_guest';
-
+  const PURPOSE_MAP = {
+    'Tugas sekolah/tugas kuliah': 1,
+    'Pemerintahan': 2,
+    'Komersial': 3,
+    'Penelitian': 4,
+    'Lainnya': 5
+  };
   /**
    * Register a new guest and immediately create a queue entry.
    * @param {Object} data – form fields from registrationPage
@@ -45,7 +51,7 @@ const GuestService = (() => {
       address:      (data.alamat   || '').trim(),
       wa_number:    data.noWa.trim(),
       guest_email:  (data.email    || '').trim(),
-      pst_purpose:  data.jenisKeperluan.trim(),
+      id_purpose: PURPOSE_MAP[data.jenisKeperluan],
       purpose_desc: data.deskripsi.trim(),
     };
 
