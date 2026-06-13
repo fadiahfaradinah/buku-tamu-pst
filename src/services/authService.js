@@ -32,7 +32,7 @@ const AuthService = (() => {
       const { error } = await _sb().auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: window.location.origin + '/admin-index.html',
           queryParams: { access_type: 'offline', prompt: 'consent' },
         },
       });
