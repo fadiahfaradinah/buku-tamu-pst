@@ -146,7 +146,16 @@ const RegistrationPage = (() => {
             </svg>
           </div>
           <h3 class="modal-title">Registrasi Berhasil!</h3>
-          <p class="modal-desc" id="modal-id-text"></p>
+          <p class="modal-desc">Nomor antrian Anda:</p>
+          <div class="modal-queue-badge" id="modal-queue-number">–</div>
+          <p class="modal-desc modal-waktu-text">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                 style="display:inline;vertical-align:middle;margin-right:4px;">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span id="modal-waktu">–</span>
+          </p>
           <p class="modal-desc">Silakan menunggu, petugas kami akan segera melayani Anda.</p>
           <button class="btn btn-primary btn-lg modal-close-btn" id="modal-ok">
             Kembali ke Beranda
@@ -208,8 +217,16 @@ const RegistrationPage = (() => {
       _setLoading(submitBtn, false);
 
       if (result.success) {
-        document.getElementById('modal-id-text').textContent =
-          `No. Registrasi: ${result.id}`;
+        // Format created_at timestamp to local readable string
+        const waktu = result.createdAt
+          ? new Date(result.createdAt).toLocaleString('id-ID', {
+              day:    '2-digit', month: 'long', year: 'numeric',
+              hour:   '2-digit', minute: '2-digit',
+            })
+          : '–';
+
+        document.getElementById('modal-queue-number').textContent = result.queueNumber ?? '–';
+        document.getElementById('modal-waktu').textContent        = waktu;
         document.getElementById('modal-success')?.classList.remove('hidden');
       } else {
         _showSubmitError(result.message);
