@@ -408,3 +408,128 @@
   .bt-search-wrap { flex: 1; }
   .bt-btn--success { margin-left: 0; }
 }
+
+/* ============================================================
+   Kelola Antrian – Queue Page Styles
+   ============================================================ */
+
+/* ── Stat Cards ──────────────────────────────────────────── */
+.aq-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 1100px) { .aq-stats { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .aq-stats { grid-template-columns: repeat(2, 1fr); } }
+
+.aq-stat-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e9f2;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.aq-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.aq-stat--total   .aq-stat-icon { background: #eff6ff; color: #1d4ed8; }
+.aq-stat--menunggu .aq-stat-icon { background: #fefce8; color: #a16207; }
+.aq-stat--dilayani .aq-stat-icon { background: #f0fdf4; color: #15803d; }
+.aq-stat--selesai  .aq-stat-icon { background: #f0f9ff; color: #0369a1; }
+.aq-stat--nomor    .aq-stat-icon { background: #fdf4ff; color: #7e22ce; }
+
+.aq-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aq-stat-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.aq-stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1e2a45;
+  line-height: 1;
+}
+
+.aq-stat-nomor-val {
+  font-size: 1.25rem;
+  color: #7e22ce;
+}
+
+/* ── Status Badges ───────────────────────────────────────── */
+.aq-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.aq-badge--menunggu { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
+.aq-badge--dilayani { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+.aq-badge--selesai  { background: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+
+/* ── Row highlights ──────────────────────────────────────── */
+.aq-row--active { background: #f0fdf4; }
+.aq-row--done   { opacity: 0.65; }
+
+/* ── Action Buttons ──────────────────────────────────────── */
+.aq-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.aq-btn--panggil {
+  background: #1a3a6b;
+  color: #fff;
+}
+.aq-btn--panggil:hover:not(:disabled) { background: #15305a; }
+.aq-btn--panggil:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.aq-btn--selesai {
+  background: #16a34a;
+  color: #fff;
+}
+.aq-btn--selesai:hover { background: #15803d; }
+
+.aq-done-label {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
