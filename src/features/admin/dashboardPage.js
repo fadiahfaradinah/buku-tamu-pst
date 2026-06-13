@@ -376,9 +376,9 @@ const DashboardPage = (() => {
   // ── Event bindings ─────────────────────────────────────────
   function _bindEvents() {
     // Logout
-    document.getElementById('btn-admin-logout')?.addEventListener('click', () => {
-      AuthService.clearSession();
-      Router.navigate('/');
+    document.getElementById('btn-admin-logout')?.addEventListener('click', async () => {
+      await AuthService.signOut();
+      window.location.href = 'admin-index.html';
     });
 
     // Sidebar toggle (mobile)
@@ -438,7 +438,7 @@ const DashboardPage = (() => {
 
   // ── Public API ─────────────────────────────────────────────
   return {
-    render() {
+    async render() {
       if (!AuthService.isLoggedIn()) {
         Router.navigate('/admin/login');
         return;
@@ -446,11 +446,13 @@ const DashboardPage = (() => {
 
       _ensureStyles();
 
-      const session = AuthService.getSession();
-      const app     = document.getElementById('app');
+      // Ambil profil user dari SDK session
+      const profile = await AuthService.getUserProfile();
+      const session = profile ?? { name: 'Admin', email: '', picture: '' };
+
+      const app = document.getElementById('app');
       app.innerHTML = _template(session);
 
-      // Inject buku tamu content
       document.getElementById('admin-content').innerHTML = _bukuTamuContent();
 
       _bindEvents();

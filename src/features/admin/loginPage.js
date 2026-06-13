@@ -1,21 +1,15 @@
 /**
  * loginPage.js
  * Feature: Admin Login
- * Renders the Google OAuth login page for admin access.
  *
- * Requires Google Identity Services script (loaded dynamically).
- * Replace GOOGLE_CLIENT_ID with your actual OAuth 2.0 Client ID from
- * https://console.cloud.google.com
+ * Menampilkan tombol "Masuk dengan Google".
+ * Klik → supabase.auth.signInWithOAuth() → redirect ke Google
+ *      → kembali ke halaman ini → handleAuthCallback() → cek pst_admin
+ *
+ * Tidak ada GIS script, tidak ada id_token, tidak ada manual token exchange.
  */
 
 const LoginPage = (() => {
-  // ─────────────────────────────────────────────────────────────
-  //  ⚠  Replace this with your Google Cloud OAuth 2.0 Client ID
-  // ─────────────────────────────────────────────────────────────
-  const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
-
-  const GIS_SCRIPT_SRC = 'https://accounts.google.com/gsi/client';
-  const GIS_SCRIPT_ID  = 'google-gsi-script';
 
   // ── Template ───────────────────────────────────────────────
   function _template() {
@@ -56,35 +50,32 @@ const LoginPage = (() => {
               Masuk menggunakan akun Gmail Anda untuk mengakses panel administrasi buku tamu.
             </p>
 
-            <!-- Google Sign-In button container -->
+            <!-- Sign-In button -->
             <div class="login-btn-wrap">
-              <div id="g_id_onload"
-                   data-client_id="${GOOGLE_CLIENT_ID}"
-                   data-callback="__googleLoginCallback"
-                   data-auto_select="false"
-                   data-itp_support="true">
-              </div>
-              <!-- Rendered by GIS library -->
-              <div id="google-btn-container" class="login-google-btn-container"></div>
-
-              <!-- Fallback button shown while GIS loads -->
-              <button class="login-google-btn" id="login-google-fallback" type="button"
-                      aria-label="Masuk dengan Google" disabled>
+              <button class="login-google-btn" id="btn-google-signin" type="button"
+                      aria-label="Masuk dengan Google">
                 <svg class="login-google-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span id="login-btn-label">Memuat…</span>
+                <span id="btn-google-label">Masuk dengan Google</span>
               </button>
+            </div>
+
+            <!-- Loading state (ditampilkan saat callback diproses) -->
+            <div class="login-loading hidden" id="login-loading" aria-live="polite">
+              <div class="login-spinner"></div>
+              <span id="login-loading-text">Memverifikasi akun…</span>
             </div>
 
             <!-- Error message -->
             <div class="login-error hidden" id="login-error" role="alert">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               <span id="login-error-text">Terjadi kesalahan.</span>
@@ -109,55 +100,13 @@ const LoginPage = (() => {
       </div>`;
   }
 
-  // ── Load GIS script dynamically ────────────────────────────
-  function _loadGIS() {
-    return new Promise((resolve, reject) => {
-      if (document.getElementById(GIS_SCRIPT_ID)) {
-        resolve(); return;
-      }
-      const script = document.createElement('script');
-      script.id  = GIS_SCRIPT_ID;
-      script.src = GIS_SCRIPT_SRC;
-      script.async = true;
-      script.defer = true;
-      script.onload  = resolve;
-      script.onerror = () => reject(new Error('Gagal memuat Google Sign-In library.'));
-      document.head.appendChild(script);
-    });
-  }
+  // ── UI helpers ─────────────────────────────────────────────
 
-  // ── Initialise GIS after script loads ─────────────────────
-  function _initGIS() {
-    if (!window.google?.accounts?.id) return;
-
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback:  window.__googleLoginCallback,
-      auto_select: false,
-    });
-
-    // Render the official Google button
-    const container = document.getElementById('google-btn-container');
-    if (container) {
-      google.accounts.id.renderButton(container, {
-        type:  'standard',
-        theme: 'outline',
-        size:  'large',
-        text:  'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-        width: 320,
-      });
-    }
-
-    // Hide fallback, show rendered button
-    const fallback = document.getElementById('login-google-fallback');
-    if (fallback) fallback.classList.add('hidden');
-  }
-
-  // ── Show error banner ──────────────────────────────────────
   function _showError(msg) {
-    const el = document.getElementById('login-error');
+    document.getElementById('login-loading')?.classList.add('hidden');
+    document.getElementById('btn-google-signin')?.removeAttribute('disabled');
+
+    const el  = document.getElementById('login-error');
     const txt = document.getElementById('login-error-text');
     if (el && txt) {
       txt.textContent = msg;
@@ -165,70 +114,84 @@ const LoginPage = (() => {
     }
   }
 
-  // ── Global callback (called by GIS after sign-in) ─────────
-  function _registerCallback() {
-    window.__googleLoginCallback = async (response) => {
-      if (!response?.credential) {
-        _showError('Login gagal. Tidak ada credential yang diterima.');
-        return;
-      }
-
-      // Decode Google JWT untuk ambil profile (email, name, picture)
-      const profile = AuthService.decodeJWT(response.credential);
-
-      if (!profile.email) {
-        _showError('Tidak dapat membaca informasi akun Google Anda.');
-        return;
-      }
-
-      // Tampilkan loading
-      _setLoading(true);
-
-      // Jalankan full flow: Supabase Auth → cek pst_admin
-      const { success, error } = await AuthService.login(response.credential, profile);
-
-      if (!success) {
-        _showError(error || 'Login gagal.');
-        _setLoading(false);
-        return;
-      }
-
-      Router.navigate('/admin/dashboard');
-    };
+  function _hideError() {
+    document.getElementById('login-error')?.classList.add('hidden');
   }
 
-  // ── Loading state ──────────────────────────────────────────
-  function _setLoading(isLoading) {
-    const container = document.getElementById('google-btn-container');
-    const label     = document.getElementById('login-btn-label');
-    const loadingEl = document.getElementById('login-loading');
+  function _setLoading(isLoading, text = 'Memverifikasi akun…') {
+    const btn     = document.getElementById('btn-google-signin');
+    const loading = document.getElementById('login-loading');
+    const loadTxt = document.getElementById('login-loading-text');
 
     if (isLoading) {
-      if (container) container.style.opacity = '0.4';
-      if (!document.getElementById('login-loading')) {
-        const div = document.createElement('div');
-        div.id        = 'login-loading';
-        div.className = 'login-loading';
-        div.innerHTML = `
-          <div class="login-spinner"></div>
-          <span>Memverifikasi akun…</span>`;
-        container?.parentNode?.insertBefore(div, container.nextSibling);
-      }
+      btn?.setAttribute('disabled', 'true');
+      if (loadTxt) loadTxt.textContent = text;
+      loading?.classList.remove('hidden');
+      _hideError();
     } else {
-      if (container) container.style.opacity = '1';
-      document.getElementById('login-loading')?.remove();
+      btn?.removeAttribute('disabled');
+      loading?.classList.add('hidden');
     }
   }
 
+  // ── OAuth callback handler ─────────────────────────────────
+
+  /**
+   * Dipanggil saat halaman load — jika URL mengandung token OAuth dari Google
+   * (ada `code` atau `access_token` di URL), proses callback dan cek pst_admin.
+   */
+  async function _handleCallback() {
+    const url    = window.location.href;
+    const hasCode  = url.includes('code=');
+    const hasToken = url.includes('access_token=');
+
+    if (!hasCode && !hasToken) return false; // bukan callback URL
+
+    _setLoading(true, 'Menyelesaikan proses login…');
+
+    const { session, isAdmin, error } = await AuthService.handleAuthCallback();
+
+    if (error) {
+      _showError(error);
+      // Bersihkan URL agar tidak diproses ulang saat refresh
+      history.replaceState(null, '', window.location.pathname);
+      return true;
+    }
+
+    if (!session || !isAdmin) {
+      _showError('Login gagal. Silakan coba lagi.');
+      history.replaceState(null, '', window.location.pathname);
+      return true;
+    }
+
+    // Sukses — bersihkan URL lalu masuk dashboard
+    history.replaceState(null, '', window.location.pathname);
+    Router.navigate('/admin/dashboard');
+    return true;
+  }
+
   // ── Event bindings ─────────────────────────────────────────
+
   function _bindEvents() {
+    // Tombol Google Sign-In
+    document.getElementById('btn-google-signin')?.addEventListener('click', async () => {
+      _setLoading(true, 'Mengarahkan ke Google…');
+      try {
+        await AuthService.signInWithGoogle();
+        // Setelah ini browser redirect — baris berikut tidak dieksekusi
+      } catch (err) {
+        _showError(`Gagal memulai login: ${err.message}`);
+      }
+    });
+
+    // Tombol kembali ke beranda
     document.getElementById('btn-login-back')?.addEventListener('click', () => {
-      // Jika dibuka dari admin-index.html, kembali ke halaman utama
       window.location.href = 'index.html';
     });
   }
 
   // ── Load CSS lazily ────────────────────────────────────────
+
   function _ensureStyles() {
     if (!document.getElementById('css-login')) {
       const link = document.createElement('link');
@@ -240,34 +203,24 @@ const LoginPage = (() => {
   }
 
   // ── Public API ─────────────────────────────────────────────
+
   return {
-    render() {
-      // Redirect if already logged in
+    async render() {
+      _ensureStyles();
+
+      // Jika sudah login, langsung ke dashboard
       if (AuthService.isLoggedIn()) {
         Router.navigate('/admin/dashboard');
         return;
       }
 
-      _ensureStyles();
-      _registerCallback();
-
-      const app = document.getElementById('app');
-      app.innerHTML = _template();
+      // Render halaman login dulu
+      document.getElementById('app').innerHTML = _template();
       _bindEvents();
 
-      // Load GIS then initialise the button
-      _loadGIS()
-        .then(() => {
-          _initGIS();
-        })
-        .catch((err) => {
-          _showError('Gagal memuat layanan Google Sign-In. Periksa koneksi internet Anda.');
-          console.error('[LoginPage]', err);
-          // Show fallback button in error state
-          const label = document.getElementById('login-btn-label');
-          if (label) label.textContent = 'Masuk dengan Google';
-          document.getElementById('login-google-fallback')?.removeAttribute('disabled');
-        });
+      // Cek apakah ini callback dari OAuth redirect
+      const wasCallback = await _handleCallback();
+      if (wasCallback) return; // sudah ditangani di atas
     },
   };
 })();

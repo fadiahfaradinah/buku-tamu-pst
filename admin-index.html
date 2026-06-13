@@ -13,17 +13,34 @@
 <body>
   <div id="app"></div>
 
-  <!-- Core services -->
+  <!--
+    ① Supabase JS SDK v2 (CDN)
+       SDK menangani: OAuth redirect, session storage, token refresh, RLS header
+  -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!--
+    ② Inisialisasi client SEBELUM semua service lain.
+       Disimpan di window._supabase agar bisa diakses dari semua modul.
+  -->
+  <script>
+    window._supabase = supabase.createClient(
+      'https://fufjaptmggulmzjrefvg.supabase.co',
+      'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l'
+    );
+  </script>
+
+  <!-- ③ Services -->
   <script src="src/services/storageService.js"></script>
   <script src="src/services/supabaseService.js"></script>
   <script src="src/services/authService.js"></script>
   <script src="src/services/adminService.js"></script>
 
-  <!-- Features -->
+  <!-- ④ Features -->
   <script src="src/features/admin/loginPage.js"></script>
   <script src="src/features/admin/dashboardPage.js"></script>
 
-  <!-- Router -->
+  <!-- ⑤ Router & bootstrap -->
   <script src="src/router.js"></script>
   <script>
     Router.on('/',                () => LoginPage.render());
