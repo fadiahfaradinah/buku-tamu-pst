@@ -2,16 +2,12 @@
  * authService.js
  * Handles Google OAuth session via Google Identity Services (GIS).
  * Session is persisted in localStorage so page refresh keeps the user logged in.
+ *
+ * Whitelist is loaded dynamically from the `pst_admin` table in Supabase.
  */
 
 const AuthService = (() => {
   const SESSION_KEY = 'admin_session';
-
-  // ── Whitelist: only these Gmail addresses may access the admin panel.
-  // Leave the array EMPTY to allow ANY Google account (not recommended for production).
-  const ALLOWED_EMAILS = [
-    // 'admin@gmail.com',
-  ];
 
   return {
     /**
@@ -31,7 +27,6 @@ const AuthService = (() => {
     /** Clear the active session (logout). */
     clearSession() {
       StorageService.remove(SESSION_KEY);
-      // Also revoke the GIS token if the library is loaded
       if (window.google?.accounts?.id) {
         google.accounts.id.disableAutoSelect();
       }
@@ -51,14 +46,20 @@ const AuthService = (() => {
     },
 
     /**
-     * Check whether the given email is permitted to access admin.
-     * If ALLOWED_EMAILS is empty, everyone is permitted.
+     * Check whether the given email exists in the pst_admin table.
      * @param {string} email
-     * @returns {boolean}
+     * @returns {Promise<boolean>}
      */
-    isAllowed(email) {
-      if (!ALLOWED_EMAILS.length) return true;
-      return ALLOWED_EMAILS.includes(email.toLowerCase());
+    async isAllowed(email) {
+      const { data, error } = await SupabaseService.select('pst_admin', {
+        email: `eq.${email.toLowerCase()}`,
+        select: 'email',
+      });
+      if (error) {
+        console.error('[AuthService] isAllowed error:', error);
+        return false;
+      }
+      return Array.isArray(data) && data.length > 0;
     },
 
     /**

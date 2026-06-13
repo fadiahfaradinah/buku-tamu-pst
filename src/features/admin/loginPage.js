@@ -167,7 +167,7 @@ const LoginPage = (() => {
 
   // ── Global callback (called by GIS after sign-in) ─────────
   function _registerCallback() {
-    window.__googleLoginCallback = (response) => {
+    window.__googleLoginCallback = async (response) => {
       if (!response?.credential) {
         _showError('Login gagal. Tidak ada credential yang diterima.');
         return;
@@ -180,8 +180,15 @@ const LoginPage = (() => {
         return;
       }
 
-      if (!AuthService.isAllowed(profile.email)) {
+      // Show loading state while checking whitelist
+      const label = document.getElementById('login-btn-label');
+      if (label) label.textContent = 'Memverifikasi…';
+
+      const allowed = await AuthService.isAllowed(profile.email);
+
+      if (!allowed) {
         _showError(`Akun ${profile.email} tidak memiliki akses admin.`);
+        if (label) label.textContent = 'Masuk dengan Google';
         return;
       }
 
@@ -193,7 +200,8 @@ const LoginPage = (() => {
   // ── Event bindings ─────────────────────────────────────────
   function _bindEvents() {
     document.getElementById('btn-login-back')?.addEventListener('click', () => {
-      Router.navigate('/');
+      // Jika dibuka dari admin-index.html, kembali ke halaman utama
+      window.location.href = 'index.html';
     });
   }
 
