@@ -1,0 +1,240 @@
+/* ============================================================
+   Admin Login Page Styles
+   ============================================================ */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #0b1e42 0%, #1a3a6b 55%, #1e4a8a 100%);
+}
+
+/* ── Background decorations ──────────────────────────────── */
+.login-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.login-bg-circle {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.login-bg-circle--1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 65%);
+  top: -200px;
+  right: -180px;
+}
+
+.login-bg-circle--2 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(232,39,46,0.12) 0%, transparent 65%);
+  bottom: -120px;
+  left: -100px;
+}
+
+.login-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ── Card wrapper ────────────────────────────────────────── */
+.login-card-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.login-card {
+  width: 100%;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  padding: 40px 36px 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+}
+
+/* ── Brand header ────────────────────────────────────────── */
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.login-brand-logo {
+  flex-shrink: 0;
+}
+
+.login-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.login-brand-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.login-brand-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.login-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin-bottom: 24px;
+}
+
+/* ── Text content ────────────────────────────────────────── */
+.login-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.login-desc {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+
+/* ── Button area ─────────────────────────────────────────── */
+.login-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* GIS renders its own iframe-based button inside this container */
+.login-google-btn-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  min-height: 44px;
+}
+
+/* Fallback / loading button */
+.login-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  padding: 13px 20px;
+  background: #fff;
+  border: 1.5px solid #dadce0;
+  border-radius: 4px;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #3c4043;
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition);
+}
+
+.login-google-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+}
+
+.login-google-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Error banner ────────────────────────────────────────── */
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.login-error svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  stroke: #b91c1c;
+}
+
+/* ── Footer note ─────────────────────────────────────────── */
+.login-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.6;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+  margin-top: 4px;
+}
+
+/* ── Back link ───────────────────────────────────────────── */
+.login-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition);
+}
+
+.login-back-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-card {
+    padding: 28px 22px 24px;
+    border-radius: var(--radius-md);
+  }
+  .login-title { font-size: 1.3rem; }
+}

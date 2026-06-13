@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buku Tamu PST – BPS Kota Parepare</title>
+  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Core services & utilities -->
+  <script src="src/services/storageService.js"></script>
+  <script src="src/services/supabaseService.js"></script>
+  <script src="src/services/authService.js"></script>
+  <script src="src/services/guestService.js"></script>
+  <script src="src/services/skdService.js"></script>
+
+  <!-- Feature: Welcome -->
+  <script src="src/features/welcome/welcomePage.js"></script>
+
+  <!-- Feature: Registration -->
+  <script src="src/features/registration/registrationPage.js"></script>
+
+  <!-- Feature: Admin -->
+  <script src="src/features/admin/loginPage.js"></script>
+
+  <!-- Router & App bootstrap -->
+  <script src="src/router.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>
