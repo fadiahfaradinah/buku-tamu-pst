@@ -418,13 +418,10 @@ const DashboardPage = (() => {
 
   return {
     async render() {
-      if (!AuthService.isLoggedIn()) {
-        Router.navigate('/admin/login');
-        return;
-      }
-
+      // Boot sudah memastikan user valid sebelum router jalan.
+      // Tidak perlu cek isLoggedIn() di sini lagi.
       _ensureStyles();
-      _activePage = 'buku-tamu'; // reset ke default setiap kali render
+      _activePage = 'buku-tamu';
 
       const profile = await AuthService.getUserProfile();
       const session = profile ?? { name: 'Admin', email: '', picture: '' };
@@ -432,7 +429,6 @@ const DashboardPage = (() => {
       document.getElementById('app').innerHTML = _template(session);
       _bindShellEvents();
 
-      // Load halaman default: Buku Tamu
       const content = document.getElementById('admin-content');
       content.innerHTML = _bukuTamuContent();
       _bindBukuTamuEvents();

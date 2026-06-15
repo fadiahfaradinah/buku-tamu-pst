@@ -8,21 +8,41 @@
   <link rel="stylesheet" href="src/styles/login.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
 </head>
 <body>
+
+  <!-- Loading splash — ditampilkan selama boot() berjalan -->
+  <div id="boot-splash" style="
+    position:fixed;inset:0;
+    background:#0b1e42;
+    display:flex;align-items:center;justify-content:center;
+    flex-direction:column;gap:16px;
+    z-index:9999;
+  ">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <rect width="48" height="48" rx="14" fill="#1a3a6b"/>
+      <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle"
+            font-family="Inter,sans-serif" font-size="18" font-weight="800"
+            fill="#FFD966">BPS</text>
+    </svg>
+    <div style="
+      width:28px;height:28px;
+      border:3px solid rgba(255,255,255,0.2);
+      border-top-color:#fff;
+      border-radius:50%;
+      animation:spin .7s linear infinite;
+    "></div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+  </div>
+
   <div id="app"></div>
 
-  <!--
-    ① Supabase JS SDK v2 (CDN)
-       SDK menangani: OAuth redirect, session storage, token refresh, RLS header
-  -->
+  <!-- ① Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-  <!--
-    ② Inisialisasi client SEBELUM semua service lain.
-       Disimpan di window._supabase agar bisa diakses dari semua modul.
-  -->
+  <!-- ② Init Supabase client -->
   <script>
     window._supabase = supabase.createClient(
       'https://fufjaptmggulmzjrefvg.supabase.co',
@@ -42,13 +62,36 @@
   <script src="src/features/admin/queuePage.js"></script>
   <script src="src/features/admin/dashboardPage.js"></script>
 
-  <!-- ⑤ Router & bootstrap -->
+  <!-- ⑤ Router -->
   <script src="src/router.js"></script>
+
+  <!-- ⑥ Bootstrap — jalankan SEBELUM Router.init() -->
   <script>
-    Router.on('/',                () => LoginPage.render());
-    Router.on('/admin/login',     () => LoginPage.render());
-    Router.on('/admin/dashboard', () => DashboardPage.render());
-    Router.init();
+    (async () => {
+      // Daftarkan route dulu (belum dijalankan)
+      Router.on('/admin/login',     (err) => LoginPage.render(err));
+      Router.on('/admin/dashboard', ()    => DashboardPage.render());
+      // Route default sama dengan login
+      Router.on('/', (err) => LoginPage.render(err));
+
+      // Jalankan auth gate
+      const { route, error } = await AuthService.boot();
+
+      // Sembunyikan splash
+      document.getElementById('boot-splash').style.display = 'none';
+
+      // Override resolve agar bisa kirim error ke LoginPage
+      if (route === '/admin/login') {
+        LoginPage.render(error);
+        // Tetap init router supaya hashchange bekerja setelah ini
+        Router.init();
+      } else {
+        // Langsung ke dashboard, baru init router untuk navigasi selanjutnya
+        DashboardPage.render();
+        Router.init();
+      }
+    })();
   </script>
+
 </body>
 </html>

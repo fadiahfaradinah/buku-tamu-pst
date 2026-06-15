@@ -2,11 +2,15 @@
  * loginPage.js
  * Feature: Admin Login
  *
- * Menampilkan tombol "Masuk dengan Google".
- * Klik → supabase.auth.signInWithOAuth() → redirect ke Google
- *      → kembali ke halaman ini → handleAuthCallback() → cek pst_admin
+ * Hanya menampilkan UI login.
+ * Semua logika auth (callback, session check, pst_admin) sudah
+ * ditangani oleh AuthService.boot() di admin-index.html — sebelum
+ * router diinisialisasi.
  *
- * Tidak ada GIS script, tidak ada id_token, tidak ada manual token exchange.
+ * loginPage hanya perlu:
+ *   1. Tampilkan form login
+ *   2. Tampilkan error jika boot() mengirim pesan error
+ *   3. Klik "Masuk dengan Google" → AuthService.signInWithGoogle()
  */
 
 const LoginPage = (() => {
@@ -16,7 +20,6 @@ const LoginPage = (() => {
     return `
       <div class="login-page page" role="main">
 
-        <!-- Background decoration -->
         <div class="login-bg" aria-hidden="true">
           <div class="login-bg-circle login-bg-circle--1"></div>
           <div class="login-bg-circle login-bg-circle--2"></div>
@@ -26,7 +29,6 @@ const LoginPage = (() => {
         <div class="login-card-wrap">
           <div class="login-card">
 
-            <!-- Logo / Brand -->
             <div class="login-brand">
               <div class="login-brand-logo" aria-hidden="true">
                 <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
@@ -44,13 +46,11 @@ const LoginPage = (() => {
 
             <div class="login-divider" aria-hidden="true"></div>
 
-            <!-- Heading -->
             <h1 class="login-title">Portal Admin</h1>
             <p class="login-desc">
               Masuk menggunakan akun Gmail Anda untuk mengakses panel administrasi buku tamu.
             </p>
 
-            <!-- Sign-In button -->
             <div class="login-btn-wrap">
               <button class="login-google-btn" id="btn-google-signin" type="button"
                       aria-label="Masuk dengan Google">
@@ -60,25 +60,25 @@ const LoginPage = (() => {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span id="btn-google-label">Masuk dengan Google</span>
+                <span>Masuk dengan Google</span>
               </button>
             </div>
 
-            <!-- Loading state (ditampilkan saat callback diproses) -->
+            <!-- Loading -->
             <div class="login-loading hidden" id="login-loading" aria-live="polite">
               <div class="login-spinner"></div>
-              <span id="login-loading-text">Memverifikasi akun…</span>
+              <span id="login-loading-text">Mengarahkan ke Google…</span>
             </div>
 
-            <!-- Error message -->
+            <!-- Error (diisi oleh router bootstrap jika ada) -->
             <div class="login-error hidden" id="login-error" role="alert">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="8"  x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              <span id="login-error-text">Terjadi kesalahan.</span>
+              <span id="login-error-text"></span>
             </div>
 
             <p class="login-note">
@@ -87,7 +87,6 @@ const LoginPage = (() => {
 
           </div>
 
-          <!-- Back link -->
           <button class="login-back-link" id="btn-login-back" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -103,100 +102,48 @@ const LoginPage = (() => {
   // ── UI helpers ─────────────────────────────────────────────
 
   function _showError(msg) {
-    document.getElementById('login-loading')?.classList.add('hidden');
-    document.getElementById('btn-google-signin')?.removeAttribute('disabled');
-
     const el  = document.getElementById('login-error');
     const txt = document.getElementById('login-error-text');
-    if (el && txt) {
+    if (el && txt && msg) {
       txt.textContent = msg;
       el.classList.remove('hidden');
     }
   }
 
-  function _hideError() {
+  function _setLoading(isLoading) {
+    document.getElementById('btn-google-signin')
+      ?.toggleAttribute('disabled', isLoading);
+    document.getElementById('login-loading')
+      ?.classList.toggle('hidden', !isLoading);
+    if (!isLoading) return;
     document.getElementById('login-error')?.classList.add('hidden');
   }
 
-  function _setLoading(isLoading, text = 'Memverifikasi akun…') {
-    const btn     = document.getElementById('btn-google-signin');
-    const loading = document.getElementById('login-loading');
-    const loadTxt = document.getElementById('login-loading-text');
-
-    if (isLoading) {
-      btn?.setAttribute('disabled', 'true');
-      if (loadTxt) loadTxt.textContent = text;
-      loading?.classList.remove('hidden');
-      _hideError();
-    } else {
-      btn?.removeAttribute('disabled');
-      loading?.classList.add('hidden');
-    }
-  }
-
-  // ── OAuth callback handler ─────────────────────────────────
-
-  /**
-   * Dipanggil saat halaman load — jika URL mengandung token OAuth dari Google
-   * (ada `code` atau `access_token` di URL), proses callback dan cek pst_admin.
-   */
-  async function _handleCallback() {
-    const url    = window.location.href;
-    const hasCode  = url.includes('code=');
-    const hasToken = url.includes('access_token=');
-
-    if (!hasCode && !hasToken) return false; // bukan callback URL
-
-    _setLoading(true, 'Menyelesaikan proses login…');
-
-    const { session, isAdmin, error } = await AuthService.handleAuthCallback();
-
-    if (error) {
-      _showError(error);
-      // Bersihkan URL agar tidak diproses ulang saat refresh
-      history.replaceState(null, '', window.location.pathname);
-      return true;
-    }
-
-    if (!session || !isAdmin) {
-      _showError('Login gagal. Silakan coba lagi.');
-      history.replaceState(null, '', window.location.pathname);
-      return true;
-    }
-
-    // Sukses — bersihkan URL lalu masuk dashboard
-    history.replaceState(null, '', window.location.pathname);
-    Router.navigate('/admin/dashboard');
-    return true;
-  }
-
-  // ── Event bindings ─────────────────────────────────────────
+  // ── Events ─────────────────────────────────────────────────
 
   function _bindEvents() {
-    // Tombol Google Sign-In
     document.getElementById('btn-google-signin')?.addEventListener('click', async () => {
-      _setLoading(true, 'Mengarahkan ke Google…');
+      _setLoading(true);
       try {
         await AuthService.signInWithGoogle();
-        // Setelah ini browser redirect — baris berikut tidak dieksekusi
+        // Browser redirect — tidak sampai sini
       } catch (err) {
+        _setLoading(false);
         _showError(`Gagal memulai login: ${err.message}`);
       }
     });
 
-    // Tombol kembali ke beranda
     document.getElementById('btn-login-back')?.addEventListener('click', () => {
       window.location.href = 'index.html';
     });
   }
 
-  // ── Load CSS lazily ────────────────────────────────────────
+  // ── Styles ─────────────────────────────────────────────────
 
   function _ensureStyles() {
     if (!document.getElementById('css-login')) {
       const link = document.createElement('link');
-      link.id   = 'css-login';
-      link.rel  = 'stylesheet';
+      link.id = 'css-login'; link.rel = 'stylesheet';
       link.href = 'src/styles/login.css';
       document.head.appendChild(link);
     }
@@ -205,22 +152,14 @@ const LoginPage = (() => {
   // ── Public API ─────────────────────────────────────────────
 
   return {
-    async render() {
+    /**
+     * @param {string|null} errorMsg – pesan error dari boot(), atau null
+     */
+    render(errorMsg = null) {
       _ensureStyles();
-
-      // Jika sudah login, langsung ke dashboard
-      if (AuthService.isLoggedIn()) {
-        Router.navigate('/admin/dashboard');
-        return;
-      }
-
-      // Render halaman login dulu
       document.getElementById('app').innerHTML = _template();
       _bindEvents();
-
-      // Cek apakah ini callback dari OAuth redirect
-      const wasCallback = await _handleCallback();
-      if (wasCallback) return; // sudah ditangani di atas
+      if (errorMsg) _showError(errorMsg);
     },
   };
 })();
