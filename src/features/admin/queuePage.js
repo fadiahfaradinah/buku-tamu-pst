@@ -45,10 +45,6 @@ const QueuePage = (() => {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
 
-  function _isToday(isoStr) {
-    return isoStr?.slice(0, 10) === _todayISO();
-  }
-
   function _esc(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -216,22 +212,18 @@ const QueuePage = (() => {
       return;
     }
 
-    // Cek apakah ada yang sedang dilayani HARI INI
-    // (aksi panggil/selesai hanya relevan untuk antrian hari ini)
-    const adaYangDilayani = _todayRows.some(r => r.queue_status === 'Sedang dilayani');
+    // Cek apakah ada yang sedang dilayani di SELURUH data (bukan hanya hari ini)
+    // karena aturan 1 tamu dilayani berlaku global, termasuk antrian lampau
+    const adaYangDilayani = _tableRows.some(r => r.queue_status === 'Sedang dilayani');
 
     tbody.innerHTML = _tableRows.map(r => {
       const guest   = r.pst_guest ?? {};
       const status  = r.queue_status;
       const idQueue = r.id_queue;
-      const isRowToday = _isToday(r.created_at);
 
       let actionHtml = '';
 
-      if (!isRowToday) {
-        // Antrian lampau — tidak ada aksi
-        actionHtml = `<span class="aq-done-label">–</span>`;
-      } else if (status === 'Menunggu') {
+      if (status === 'Menunggu') {
         const disabled = adaYangDilayani ? 'disabled' : '';
         actionHtml = `
           <button class="aq-btn aq-btn--panggil" data-id="${idQueue}" data-action="panggil"
