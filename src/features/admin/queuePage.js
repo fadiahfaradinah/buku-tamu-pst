@@ -2,22 +2,26 @@
  * queuePage.js
  * Feature: Admin – Kelola Antrian
  *
- * Menampilkan:
- *   - 5 kartu statistik hari ini
- *   - Tabel daftar antrian dengan action Panggil / Selesaikan
+ * Stat cards  → selalu menunjukkan data HARI INI (tidak terpengaruh filter).
+ * Tabel       → default semua antrian; bisa difilter berdasarkan range tanggal.
  *
- * Aturan bisnis:
- *   - Hanya 1 tamu bisa berstatus "Sedang dilayani" pada satu waktu.
- *   - Ketika 1 tamu sedang dilayani → semua tombol "Panggil Antrian" row lain di-disable.
- *   - Ketika di-"Selesaikan" → row tersebut selesai, row lain kembali aktif.
+ * Aturan bisnis aksi:
+ *   - Hanya 1 tamu bisa "Sedang dilayani" dalam satu waktu.
+ *   - Tombol Panggil antrian lain di-disable saat ada yang sedang dilayani.
+ *   - Setelah Selesaikan → row tersebut done, row lain aktif kembali.
+ *   - Aksi hanya diperbolehkan pada antrian hari ini (bukan antrian lampau).
  */
 
 const QueuePage = (() => {
 
   // ── State ──────────────────────────────────────────────────
-  let _rows = []; // hasil getTodayQueue()
+  let _tableRows  = [];   // data yang ditampilkan di tabel (all / filtered)
+  let _todayRows  = [];   // data hari ini untuk stat cards
+  let _isFiltered = false;
+  let _dateFrom   = '';
+  let _dateTo     = '';
 
-  // ── Purpose label ─────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────
   const PURPOSE_LABELS = {
     1: 'Tugas sekolah/tugas kuliah',
     2: 'Pemerintahan',
@@ -25,36 +29,46 @@ const QueuePage = (() => {
     4: 'Penelitian',
     5: 'Lainnya',
   };
+
   function _purposeLabel(id) { return PURPOSE_LABELS[id] || '-'; }
 
-  // ── Format date ────────────────────────────────────────────
   function _formatDate(isoStr) {
     if (!isoStr) return '-';
     const d = new Date(isoStr);
-    const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+    const p = n => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
   }
 
-  // ── Escape HTML ────────────────────────────────────────────
+  function _todayISO() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function _isToday(isoStr) {
+    return isoStr?.slice(0, 10) === _todayISO();
+  }
+
   function _esc(str) {
     return String(str ?? '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;')
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // ── Template konten halaman ────────────────────────────────
+  // ── Template ───────────────────────────────────────────────
   function _template() {
+    const today = _todayISO();
     return `
-      <!-- ░ STAT CARDS ░ -->
+      <!-- ░░ STAT CARDS — selalu data hari ini ░░ -->
       <div class="aq-stats" id="aq-stats">
+
         <div class="aq-stat-card aq-stat--total">
           <div class="aq-stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </div>
           <div class="aq-stat-body">
@@ -67,8 +81,7 @@ const QueuePage = (() => {
           <div class="aq-stat-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
           </div>
           <div class="aq-stat-body">
@@ -119,10 +132,34 @@ const QueuePage = (() => {
             <span class="aq-stat-value aq-stat-nomor-val" id="stat-nomor">–</span>
           </div>
         </div>
+
       </div>
 
-      <!-- ░ TABLE ░ -->
-      <div class="bt-table-wrap" style="margin-top:20px;">
+      <!-- ░░ FILTER ░░ -->
+      <div class="bt-toolbar" style="margin-top:20px;">
+        <div class="bt-filter-wrap">
+          <label class="bt-filter-label" for="aq-date-from">Dari</label>
+          <input class="bt-date-input" id="aq-date-from" type="date"
+                 aria-label="Tanggal dari" />
+          <label class="bt-filter-label" for="aq-date-to">Sampai</label>
+          <input class="bt-date-input" id="aq-date-to" type="date"
+                 aria-label="Tanggal sampai" />
+          <button class="bt-btn bt-btn--primary" id="btn-aq-filter" type="button">Filter</button>
+          <button class="bt-btn bt-btn--outline" id="btn-aq-clear"  type="button">Clear Filter</button>
+        </div>
+      </div>
+
+      <!-- Filter badge -->
+      <div class="bt-filter-badge hidden" id="aq-filter-badge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+        </svg>
+        <span id="aq-filter-badge-text"></span>
+      </div>
+
+      <!-- ░░ TABLE ░░ -->
+      <div class="bt-table-wrap" style="margin-top:12px;">
         <table class="bt-table" id="aq-table">
           <thead>
             <tr>
@@ -143,17 +180,19 @@ const QueuePage = (() => {
             </tr>
           </tbody>
         </table>
-      </div>`;
+      </div>
+
+      <div class="bt-footer-info" id="aq-footer-info"></div>`;
   }
 
-  // ── Render stats ───────────────────────────────────────────
-  function _renderStats(summary) {
-    document.getElementById('stat-total')?.textContent    != null &&
-      (document.getElementById('stat-total').textContent    = summary.total);
-    document.getElementById('stat-menunggu').textContent  = summary.menunggu;
-    document.getElementById('stat-dilayani').textContent  = summary.dilayani;
-    document.getElementById('stat-selesai').textContent   = summary.selesai;
-    document.getElementById('stat-nomor').textContent     = summary.nomorDilayani;
+  // ── Render stat cards (selalu pakai _todayRows) ────────────
+  function _renderStats() {
+    const s = QueueAdminService.getSummary(_todayRows);
+    document.getElementById('stat-total').textContent    = s.total;
+    document.getElementById('stat-menunggu').textContent = s.menunggu;
+    document.getElementById('stat-dilayani').textContent = s.dilayani;
+    document.getElementById('stat-selesai').textContent  = s.selesai;
+    document.getElementById('stat-nomor').textContent    = s.nomorDilayani;
   }
 
   // ── Status badge ───────────────────────────────────────────
@@ -171,22 +210,28 @@ const QueuePage = (() => {
     const tbody = document.getElementById('aq-tbody');
     if (!tbody) return;
 
-    if (!_rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="bt-empty">Belum ada antrian hari ini.</td></tr>`;
+    if (!_tableRows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="bt-empty">Tidak ada data antrian.</td></tr>`;
+      _updateFooter(0);
       return;
     }
 
-    // Cek apakah ada yang sedang dilayani
-    const adaYangDilayani = _rows.some(r => r.queue_status === 'Sedang dilayani');
+    // Cek apakah ada yang sedang dilayani HARI INI
+    // (aksi panggil/selesai hanya relevan untuk antrian hari ini)
+    const adaYangDilayani = _todayRows.some(r => r.queue_status === 'Sedang dilayani');
 
-    tbody.innerHTML = _rows.map(r => {
+    tbody.innerHTML = _tableRows.map(r => {
       const guest   = r.pst_guest ?? {};
       const status  = r.queue_status;
       const idQueue = r.id_queue;
+      const isRowToday = _isToday(r.created_at);
 
       let actionHtml = '';
 
-      if (status === 'Menunggu') {
+      if (!isRowToday) {
+        // Antrian lampau — tidak ada aksi
+        actionHtml = `<span class="aq-done-label">–</span>`;
+      } else if (status === 'Menunggu') {
         const disabled = adaYangDilayani ? 'disabled' : '';
         actionHtml = `
           <button class="aq-btn aq-btn--panggil" data-id="${idQueue}" data-action="panggil"
@@ -213,7 +258,6 @@ const QueuePage = (() => {
             Selesaikan
           </button>`;
       } else {
-        // Selesai — tidak ada action
         actionHtml = `<span class="aq-done-label">–</span>`;
       }
 
@@ -229,9 +273,7 @@ const QueuePage = (() => {
         </tr>`;
     }).join('');
 
-    // Update stat cards setiap kali tabel di-render ulang
-    const summary = QueueAdminService.getSummary(_rows);
-    _renderStats(summary);
+    _updateFooter(_tableRows.length);
   }
 
   function _statusClass(s) {
@@ -240,28 +282,87 @@ const QueuePage = (() => {
     return 'waiting';
   }
 
-  // ── Load data ──────────────────────────────────────────────
-  async function _load() {
-    const { data, error } = await QueueAdminService.getTodayQueue();
-    if (error) {
-      const tbody = document.getElementById('aq-tbody');
-      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="bt-error">Gagal memuat: ${_esc(error)}</td></tr>`;
-      return;
+  function _updateFooter(count) {
+    const el = document.getElementById('aq-footer-info');
+    if (el) el.textContent = `Menampilkan ${count} antrian`;
+  }
+
+  function _updateFilterBadge() {
+    const badge = document.getElementById('aq-filter-badge');
+    const text  = document.getElementById('aq-filter-badge-text');
+    if (!badge || !text) return;
+    if (_isFiltered) {
+      text.textContent = `Filter aktif: ${_formatDate(_dateFrom + 'T00:00:00')} – ${_formatDate(_dateTo + 'T00:00:00')}`;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
     }
-    _rows = data;
+  }
+
+  // ── Load data ──────────────────────────────────────────────
+
+  /** Load stat cards (hari ini) — selalu dipanggil terpisah */
+  async function _loadTodayStats() {
+    const { data } = await QueueAdminService.getTodayQueue();
+    _todayRows = data ?? [];
+    _renderStats();
+  }
+
+  /** Load semua antrian untuk tabel */
+  async function _loadAll() {
+    _setTableLoading();
+    const { data, error } = await QueueAdminService.getAllQueue();
+    if (error) { _renderTableError(error); return; }
+    _tableRows  = data ?? [];
+    _isFiltered = false;
+    _updateFilterBadge();
     _renderTable();
+  }
+
+  /** Load antrian berdasarkan range tanggal */
+  async function _loadRange(from, to) {
+    _setTableLoading();
+    const { data, error } = await QueueAdminService.getQueueByRange(from, to);
+    if (error) { _renderTableError(error); return; }
+    _tableRows  = data ?? [];
+    _isFiltered = true;
+    _dateFrom   = from;
+    _dateTo     = to;
+    _updateFilterBadge();
+    _renderTable();
+  }
+
+  function _setTableLoading() {
+    const tbody = document.getElementById('aq-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="bt-loading"><div class="bt-spinner"></div> Memuat data…</td></tr>`;
+  }
+
+  function _renderTableError(msg) {
+    const tbody = document.getElementById('aq-tbody');
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="bt-error">Gagal memuat: ${_esc(msg)}</td></tr>`;
   }
 
   // ── Action handlers ────────────────────────────────────────
   async function _handleAction(idQueue, action) {
     const newStatus = action === 'panggil' ? 'Sedang dilayani' : 'Selesai';
 
-    // Optimistic UI: update state lokal dulu
-    const row = _rows.find(r => r.id_queue === idQueue);
-    if (!row) return;
-    row.queue_status = newStatus;
-    if (newStatus === 'Sedang dilayani') row.called_at   = new Date().toISOString();
-    if (newStatus === 'Selesai')         row.finished_at = new Date().toISOString();
+    // Optimistic update di _tableRows
+    const tableRow = _tableRows.find(r => r.id_queue === idQueue);
+    if (tableRow) {
+      tableRow.queue_status = newStatus;
+      if (newStatus === 'Sedang dilayani') tableRow.called_at   = new Date().toISOString();
+      if (newStatus === 'Selesai')         tableRow.finished_at = new Date().toISOString();
+    }
+
+    // Sync ke _todayRows juga (untuk stat cards)
+    const todayRow = _todayRows.find(r => r.id_queue === idQueue);
+    if (todayRow) {
+      todayRow.queue_status = newStatus;
+      if (newStatus === 'Sedang dilayani') todayRow.called_at   = new Date().toISOString();
+      if (newStatus === 'Selesai')         todayRow.finished_at = new Date().toISOString();
+    }
+
+    _renderStats();
     _renderTable();
 
     // Persist ke Supabase
@@ -269,18 +370,33 @@ const QueuePage = (() => {
     if (!success) {
       alert(`Gagal memperbarui status: ${error}`);
       // Rollback: reload dari server
-      await _load();
+      await Promise.all([_loadTodayStats(), _loadAll()]);
     }
   }
 
   // ── Event bindings ─────────────────────────────────────────
-  function _bindTableEvents() {
+  function _bindEvents() {
+    // Filter apply
+    document.getElementById('btn-aq-filter')?.addEventListener('click', () => {
+      const from = document.getElementById('aq-date-from')?.value;
+      const to   = document.getElementById('aq-date-to')?.value;
+      if (!from || !to) { alert('Pilih tanggal dari dan sampai terlebih dahulu.'); return; }
+      if (from > to)    { alert('Tanggal "Dari" tidak boleh melebihi "Sampai".'); return; }
+      _loadRange(from, to);
+    });
+
+    // Clear filter
+    document.getElementById('btn-aq-clear')?.addEventListener('click', () => {
+      document.getElementById('aq-date-from').value = '';
+      document.getElementById('aq-date-to').value   = '';
+      _loadAll();
+    });
+
+    // Action buttons (delegated)
     document.getElementById('aq-tbody')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn || btn.disabled) return;
-      const idQueue = Number(btn.dataset.id);
-      const action  = btn.dataset.action;
-      _handleAction(idQueue, action);
+      _handleAction(Number(btn.dataset.id), btn.dataset.action);
     });
   }
 
@@ -288,8 +404,13 @@ const QueuePage = (() => {
   return {
     async render(contentEl) {
       contentEl.innerHTML = _template();
-      _bindTableEvents();
-      await _load();
+      _bindEvents();
+
+      // Load keduanya paralel
+      await Promise.all([
+        _loadTodayStats(),
+        _loadAll(),
+      ]);
     },
   };
 })();

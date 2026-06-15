@@ -27,19 +27,9 @@ const QueueAdminService = (() => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  /**
-   * Ambil semua antrian hari ini, join dengan pst_guest untuk nama & instansi.
-   * @returns {Promise<{ data: Array, error: string|null }>}
-   */
-  async function getTodayQueue() {
-    const today    = _today();
-    const tomorrow = (() => {
-      const d = new Date(); d.setDate(d.getDate() + 1);
-      const p = n => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-    })();
-
-    const { data, error } = await _sb()
+  /** Select query dasar dengan join pst_guest */
+  function _baseQuery() {
+    return _sb()
       .from('pst_queue')
       .select(`
         id_queue,
@@ -56,10 +46,54 @@ const QueueAdminService = (() => {
           purpose_desc,
           visit_date
         )
-      `)
+      `);
+  }
+
+  /**
+   * Ambil semua antrian hari ini, join dengan pst_guest.
+   * Dipakai untuk stat cards (selalu menunjukkan data hari ini).
+   * @returns {Promise<{ data: Array, error: string|null }>}
+   */
+  async function getTodayQueue() {
+    const today    = _today();
+    const tomorrow = (() => {
+      const d = new Date(); d.setDate(d.getDate() + 1);
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    })();
+
+    const { data, error } = await _baseQuery()
       .gte('created_at', `${today}T00:00:00`)
       .lt('created_at',  `${tomorrow}T00:00:00`)
       .order('id_queue', { ascending: true });
+
+    if (error) return { data: [], error: error.message };
+    return { data: data ?? [], error: null };
+  }
+
+  /**
+   * Ambil semua antrian (semua tanggal), diurutkan terbaru di atas.
+   * @returns {Promise<{ data: Array, error: string|null }>}
+   */
+  async function getAllQueue() {
+    const { data, error } = await _baseQuery()
+      .order('created_at', { ascending: false });
+
+    if (error) return { data: [], error: error.message };
+    return { data: data ?? [], error: null };
+  }
+
+  /**
+   * Ambil antrian berdasarkan range tanggal (berdasarkan created_at).
+   * @param {string} dateFrom  – YYYY-MM-DD
+   * @param {string} dateTo    – YYYY-MM-DD
+   * @returns {Promise<{ data: Array, error: string|null }>}
+   */
+  async function getQueueByRange(dateFrom, dateTo) {
+    const { data, error } = await _baseQuery()
+      .gte('created_at', `${dateFrom}T00:00:00`)
+      .lte('created_at', `${dateTo}T23:59:59`)
+      .order('created_at', { ascending: false });
 
     if (error) return { data: [], error: error.message };
     return { data: data ?? [], error: null };
@@ -105,5 +139,5 @@ const QueueAdminService = (() => {
     };
   }
 
-  return { getTodayQueue, updateStatus, getSummary };
+  return { getTodayQueue, getAllQueue, getQueueByRange, updateStatus, getSummary };
 })();
