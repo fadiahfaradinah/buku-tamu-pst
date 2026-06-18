@@ -42,6 +42,9 @@
   <!-- ① Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
   <!-- ② Init Supabase client -->
   <script>
     window._supabase = supabase.createClient(
@@ -56,10 +59,12 @@
   <script src="src/services/authService.js"></script>
   <script src="src/services/adminService.js"></script>
   <script src="src/services/queueAdminService.js"></script>
+  <script src="src/services/statsService.js"></script>
 
   <!-- ④ Features -->
   <script src="src/features/admin/loginPage.js"></script>
   <script src="src/features/admin/queuePage.js"></script>
+  <script src="src/features/admin/statsPage.js"></script>
   <script src="src/features/admin/dashboardPage.js"></script>
 
   <!-- ⑤ Router -->

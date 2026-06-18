@@ -44,6 +44,19 @@ const DashboardPage = (() => {
           <nav class="admin-sidebar-nav" aria-label="Menu Admin">
             <ul>
               <li>
+                <button class="admin-nav-item ${_activePage === 'dashboard' ? 'active' : ''}"
+                        data-page="dashboard" type="button">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                  Dashboard
+                </button>
+              </li>
+              <li>
                 <button class="admin-nav-item ${_activePage === 'buku-tamu' ? 'active' : ''}"
                         data-page="buku-tamu" type="button">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -106,7 +119,7 @@ const DashboardPage = (() => {
               </svg>
             </button>
             <h1 class="admin-topbar-title" id="admin-page-title">
-              ${_activePage === 'antrian' ? 'Kelola Antrian' : 'Buku Tamu'}
+              ${_activePage === 'antrian' ? 'Kelola Antrian' : _activePage === 'dashboard' ? 'Dashboard' : 'Buku Tamu'}
             </h1>
           </div>
           <div class="admin-content" id="admin-content"></div>
@@ -353,20 +366,21 @@ const DashboardPage = (() => {
   async function _switchPage(page) {
     _activePage = page;
 
-    // Update active state di sidebar
     document.querySelectorAll('.admin-nav-item').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.page === page);
     });
 
-    // Update topbar title
+    const titleMap = { dashboard: 'Dashboard', 'buku-tamu': 'Buku Tamu', antrian: 'Kelola Antrian' };
     const title = document.getElementById('admin-page-title');
-    if (title) title.textContent = page === 'antrian' ? 'Kelola Antrian' : 'Buku Tamu';
+    if (title) title.textContent = titleMap[page] ?? 'Buku Tamu';
 
     const content = document.getElementById('admin-content');
     if (!content) return;
 
     if (page === 'antrian') {
       await QueuePage.render(content);
+    } else if (page === 'dashboard') {
+      await StatsPage.render(content);
     } else {
       content.innerHTML = _bukuTamuContent();
       _bindBukuTamuEvents();
@@ -418,10 +432,8 @@ const DashboardPage = (() => {
 
   return {
     async render() {
-      // Boot sudah memastikan user valid sebelum router jalan.
-      // Tidak perlu cek isLoggedIn() di sini lagi.
       _ensureStyles();
-      _activePage = 'buku-tamu';
+      _activePage = 'dashboard';
 
       const profile = await AuthService.getUserProfile();
       const session = profile ?? { name: 'Admin', email: '', picture: '' };
@@ -429,10 +441,9 @@ const DashboardPage = (() => {
       document.getElementById('app').innerHTML = _template(session);
       _bindShellEvents();
 
+      // Default: halaman Dashboard
       const content = document.getElementById('admin-content');
-      content.innerHTML = _bukuTamuContent();
-      _bindBukuTamuEvents();
-      await _loadAllGuests();
+      await StatsPage.render(content);
     },
   };
 })();
