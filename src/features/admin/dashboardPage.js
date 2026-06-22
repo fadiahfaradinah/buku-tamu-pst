@@ -82,6 +82,19 @@ const DashboardPage = (() => {
                   Kelola Antrian
                 </button>
               </li>
+              <li>
+                <button class="admin-nav-item ${_activePage === 'petugas' ? 'active' : ''}"
+                        data-page="petugas" type="button">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Kelola Petugas
+                </button>
+              </li>
             </ul>
           </nav>
 
@@ -119,7 +132,7 @@ const DashboardPage = (() => {
               </svg>
             </button>
             <h1 class="admin-topbar-title" id="admin-page-title">
-              ${_activePage === 'antrian' ? 'Kelola Antrian' : _activePage === 'dashboard' ? 'Dashboard' : 'Buku Tamu'}
+              ${_activePage === 'antrian' ? 'Kelola Antrian' : _activePage === 'dashboard' ? 'Dashboard' : _activePage === 'petugas' ? 'Kelola Petugas' : 'Buku Tamu'}
             </h1>
           </div>
           <div class="admin-content" id="admin-content"></div>
@@ -370,7 +383,7 @@ const DashboardPage = (() => {
       btn.classList.toggle('active', btn.dataset.page === page);
     });
 
-    const titleMap = { dashboard: 'Dashboard', 'buku-tamu': 'Buku Tamu', antrian: 'Kelola Antrian' };
+    const titleMap = { dashboard: 'Dashboard', 'buku-tamu': 'Buku Tamu', antrian: 'Kelola Antrian', petugas: 'Kelola Petugas' };
     const title = document.getElementById('admin-page-title');
     if (title) title.textContent = titleMap[page] ?? 'Buku Tamu';
 
@@ -381,6 +394,8 @@ const DashboardPage = (() => {
       await QueuePage.render(content);
     } else if (page === 'dashboard') {
       await StatsPage.render(content);
+    } else if (page === 'petugas') {
+      await PetugasPage.render(content);
     } else {
       content.innerHTML = _bukuTamuContent();
       _bindBukuTamuEvents();
