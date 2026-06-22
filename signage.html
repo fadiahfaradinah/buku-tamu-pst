@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Antrian PST – BPS Kota Parepare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Root & Background ─────────────────────────────────── */
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: #0b1e42;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Decorative background circles */
+    body::before, body::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    body::before {
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 65%);
+      top: -200px; right: -150px;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(255,217,102,0.08) 0%, transparent 65%);
+      bottom: -150px; left: -100px;
+    }
+
+    /* ── TOP BAR ───────────────────────────────────────────── */
+    .topbar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .topbar-logo {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: #1a3a6b;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      border: 2px solid rgba(255,217,102,0.3);
+    }
+
+    .topbar-brand-text { display: flex; flex-direction: column; }
+    .topbar-brand-name {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+    .topbar-brand-sub {
+      font-size: 0.78rem;
+      color: #8fb3e8;
+      font-weight: 500;
+    }
+
+    /* Clock */
+    .topbar-clock {
+      text-align: right;
+    }
+    .clock-time {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .clock-date {
+      font-size: 0.82rem;
+      color: #8fb3e8;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    /* ── MAIN CONTENT ──────────────────────────────────────── */
+    .main {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 40px 48px;
+      gap: 32px;
+    }
+
+    .serving-label {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #8fb3e8;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    /* ── Queue Card ────────────────────────────────────────── */
+    .queue-card {
+      background: linear-gradient(145deg, #1a3a6b 0%, #1e4a8a 100%);
+      border: 2px solid rgba(255,217,102,0.25);
+      border-radius: 28px;
+      padding: 48px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.4),
+        0 0 0 1px rgba(255,255,255,0.05) inset;
+      min-width: 420px;
+    }
+
+    .queue-card-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #ffd966;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+
+    /* ── Queue Number ──────────────────────────────────────── */
+    .queue-number-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 160px;
+      min-width: 320px;
+    }
+
+    .queue-number {
+      font-size: 9rem;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      text-align: center;
+      transition: none;
+    }
+
+    /* Idle state (no one being served) */
+    .queue-number.is-idle {
+      font-size: 7rem;
+      color: rgba(255,255,255,0.25);
+    }
+
+    /* ── Transition animations ─────────────────────────────── */
+    @keyframes slideOutUp {
+      from { transform: translateY(0);    opacity: 1; }
+      to   { transform: translateY(-80px); opacity: 0; }
+    }
+    @keyframes slideInUp {
+      from { transform: translateY(80px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    @keyframes pulse-glow {
+      0%   { box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 0   rgba(255,217,102,0.4); }
+      50%  { box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 40px 8px rgba(255,217,102,0.25); }
+      100% { box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 0   rgba(255,217,102,0.4); }
+    }
+
+    .queue-number.anim-out {
+      animation: slideOutUp 0.35s ease-in forwards;
+    }
+    .queue-number.anim-in {
+      animation: slideInUp 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+    }
+    .queue-card.anim-glow {
+      animation: pulse-glow 1.2s ease-out;
+    }
+
+    /* ── Status indicator ──────────────────────────────────── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.25);
+      animation: blink 2s ease-in-out infinite;
+    }
+    .status-dot.is-idle {
+      background: #64748b;
+      box-shadow: 0 0 0 3px rgba(100,116,139,0.2);
+      animation: none;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+    .status-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #8fb3e8;
+    }
+
+    /* ── Info row bawah ────────────────────────────────────── */
+    .info-row {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .info-chip {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      padding: 8px 20px;
+      font-size: 0.8rem;
+      color: #8fb3e8;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .info-chip strong {
+      color: #fff;
+      font-weight: 700;
+    }
+
+    /* ── Connection error notice ───────────────────────────── */
+    .conn-error {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(220,38,38,0.9);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 999px;
+      display: none;
+      z-index: 100;
+    }
+    .conn-error.visible { display: block; }
+
+    /* ── Ticker / footer ───────────────────────────────────── */
+    .ticker {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 44px;
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .ticker-inner {
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      animation: ticker-scroll 35s linear infinite;
+      color: #8fb3e8;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      gap: 60px;
+    }
+
+    @keyframes ticker-scroll {
+      from { transform: translateX(100vw); }
+      to   { transform: translateX(-100%); }
+    }
+    .ticker-sep { color: #ffd966; font-size: 1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+          <text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle"
+                font-family="Inter,sans-serif" font-size="16" font-weight="900"
+                fill="#FFD966">BPS</text>
+        </svg>
+      </div>
+      <div class="topbar-brand-text">
+        <span class="topbar-brand-name">BPS Kota Parepare</span>
+        <span class="topbar-brand-sub">Pelayanan Statistik Terpadu</span>
+      </div>
+    </div>
+
+    <div class="topbar-clock">
+      <div class="clock-time" id="clock-time">00:00:00</div>
+      <div class="clock-date" id="clock-date">–</div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <p class="serving-label">Sedang Dilayani</p>
+
+    <div class="queue-card" id="queue-card">
+      <span class="queue-card-label">Nomor Antrian</span>
+
+      <div class="queue-number-wrap">
+        <div class="queue-number is-idle" id="queue-number">–</div>
+      </div>
+
+      <div class="status-row">
+        <span class="status-dot is-idle" id="status-dot"></span>
+        <span class="status-text"    id="status-text">Tidak ada antrian aktif</span>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        Menunggu: <strong id="info-menunggu">–</strong>
+      </div>
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Selesai: <strong id="info-selesai">–</strong>
+      </div>
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Total hari ini: <strong id="info-total">–</strong>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Ticker -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker-inner">
+      Selamat datang di Pelayanan Statistik Terpadu BPS Kota Parepare
+      <span class="ticker-sep">✦</span>
+      Harap perhatikan nomor antrian Anda di layar ini
+      <span class="ticker-sep">✦</span>
+      Terima kasih atas kunjungan Anda
+      <span class="ticker-sep">✦</span>
+      BPS Kota Parepare – Melayani dengan Data
+      <span class="ticker-sep">✦</span>
+    </div>
+  </div>
+
+  <!-- Connection error -->
+  <div class="conn-error" id="conn-error">
+    ⚠ Koneksi terputus — mencoba menghubungkan kembali…
+  </div>
+
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <script>
+    /* ─────────────────────────────────────────────────────────
+       CONFIG
+    ───────────────────────────────────────────────────────── */
+    const SUPABASE_URL = 'https://fufjaptmggulmzjrefvg.supabase.co';
+    const ANON_KEY     = 'sb_publishable_KpToL4zDIleZviiLL6hnvA_RXs3la0l';
+
+    const sb = supabase.createClient(SUPABASE_URL, ANON_KEY);
+
+    /* ─────────────────────────────────────────────────────────
+       STATE
+    ───────────────────────────────────────────────────────── */
+    let _currentNumber = null; // null = tidak ada yang aktif
+
+    /* ─────────────────────────────────────────────────────────
+       CLOCK
+    ───────────────────────────────────────────────────────── */
+    const DAYS   = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+    const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni',
+                    'Juli','Agustus','September','Oktober','November','Desember'];
+
+    function updateClock() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+
+      document.getElementById('clock-time').textContent =
+        `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+      document.getElementById('clock-date').textContent =
+        `${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    /* ─────────────────────────────────────────────────────────
+       QUEUE DISPLAY
+    ───────────────────────────────────────────────────────── */
+    function _today() {
+      const d = new Date();
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    }
+
+    /**
+     * Update tampilan nomor antrian dengan animasi transisi.
+     * @param {string|null} newNumber – null = tidak ada yang dilayani
+     */
+    function updateDisplay(newNumber) {
+      const el   = document.getElementById('queue-number');
+      const dot  = document.getElementById('status-dot');
+      const txt  = document.getElementById('status-text');
+      const card = document.getElementById('queue-card');
+
+      // Tidak ada perubahan
+      if (newNumber === _currentNumber) return;
+
+      const wasActive = _currentNumber !== null;
+      const isActive  = newNumber !== null;
+
+      _currentNumber = newNumber;
+
+      // ── Animasi transisi ──────────────────────────────────
+      el.classList.remove('anim-in');
+      el.classList.add('anim-out');
+
+      setTimeout(() => {
+        // Ganti konten saat element tidak terlihat
+        el.textContent = newNumber ?? '–';
+        el.classList.toggle('is-idle', !isActive);
+        el.classList.remove('anim-out');
+        el.classList.add('anim-in');
+
+        // Hapus class anim-in setelah selesai
+        el.addEventListener('animationend', () => {
+          el.classList.remove('anim-in');
+        }, { once: true });
+      }, 350);
+
+      // ── Status indicator ──────────────────────────────────
+      dot.classList.toggle('is-idle', !isActive);
+      txt.textContent = isActive
+        ? `Antrian ${newNumber} sedang dilayani`
+        : 'Tidak ada antrian aktif';
+
+      // ── Glow effect saat ada nomor baru masuk ─────────────
+      if (isActive && newNumber !== null) {
+        card.classList.remove('anim-glow');
+        // Force reflow untuk restart animasi
+        void card.offsetWidth;
+        card.classList.add('anim-glow');
+        card.addEventListener('animationend', () => {
+          card.classList.remove('anim-glow');
+        }, { once: true });
+      }
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       UPDATE INFO CHIPS
+    ───────────────────────────────────────────────────────── */
+    function updateChips(rows) {
+      const menunggu = rows.filter(r => r.queue_status === 'Menunggu').length;
+      const selesai  = rows.filter(r => r.queue_status === 'Selesai').length;
+      document.getElementById('info-menunggu').textContent = menunggu;
+      document.getElementById('info-selesai').textContent  = selesai;
+      document.getElementById('info-total').textContent    = rows.length;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       INITIAL FETCH — data hari ini
+    ───────────────────────────────────────────────────────── */
+    async function fetchToday() {
+      const today    = _today();
+      const tomorrow = (() => {
+        const d = new Date(); d.setDate(d.getDate() + 1);
+        const p = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+      })();
+
+      const { data, error } = await sb
+        .from('pst_queue')
+        .select('id_queue, queue_number, queue_status, created_at')
+        .gte('created_at', `${today}T00:00:00`)
+        .lt('created_at',  `${tomorrow}T00:00:00`);
+
+      if (error) {
+        console.error('[Signage] fetchToday error:', error.message);
+        return;
+      }
+
+      const rows   = data ?? [];
+      const active = rows.find(r => r.queue_status === 'Sedang dilayani');
+      updateDisplay(active?.queue_number ?? null);
+      updateChips(rows);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       REALTIME SUBSCRIPTION
+       Dengarkan semua perubahan pada pst_queue.
+       Ketika ada UPDATE (status berubah), fetch ulang data hari ini.
+    ───────────────────────────────────────────────────────── */
+    function subscribeRealtime() {
+      sb
+        .channel('signage-queue')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pst_queue' },
+          () => {
+            // Satu baris berubah → fetch ulang data hari ini
+            fetchToday();
+          }
+        )
+        .subscribe((status) => {
+          const errEl = document.getElementById('conn-error');
+          if (status === 'SUBSCRIBED') {
+            errEl.classList.remove('visible');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            errEl.classList.add('visible');
+            // Coba reconnect setelah 5 detik
+            setTimeout(subscribeRealtime, 5000);
+          }
+        });
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       BOOT
+    ───────────────────────────────────────────────────────── */
+    fetchToday();
+    subscribeRealtime();
+
+    // Fallback polling setiap 30 detik (jika realtime putus)
+    setInterval(fetchToday, 30_000);
+  </script>
+
+</body>
+</html>
