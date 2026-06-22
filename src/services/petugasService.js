@@ -118,6 +118,22 @@ const PetugasService = (() => {
 
     if (error) return { data: null, error: error.message };
     return { data, error: null };
+    try {
+  console.log("DATA YANG MAU DIINSERT:", payload);
+
+  const { data, error } = await supabase
+    .from("pst_petugas")
+    .insert(payload);
+
+  if (error) {
+    console.error("INSERT ERROR:", error);
+    alert(error.message);
+  } else {
+    console.log("SUCCESS:", data);
+  }
+} catch (err) {
+  console.error("CATCH ERROR:", err);
+}
   }
 
   // ── UPDATE ────────────────────────────────────────────────

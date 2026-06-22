@@ -11,7 +11,7 @@ const PetugasPage = (() => {
 
   // ── Konstanta ──────────────────────────────────────────────
   const JENIS_OPTIONS  = ['Pelayanan', 'Pengaduan'];
-  const JADWAL_OPTIONS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Senin-Jumat'];
+  const JADWAL_OPTIONS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
   // ── State ──────────────────────────────────────────────────
   let _petugas    = [];        // master list
